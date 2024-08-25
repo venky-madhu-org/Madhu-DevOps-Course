@@ -1,0 +1,57 @@
+pipeline {
+   agent any
+   environment 
+    {
+        VERSION = "${BUILD_NUMBER}"
+        PROJECT = 'nodeapp31'
+        IMAGE = "$PROJECT:$VERSION"
+        ECRURL = 'https://754332495332.dkr.ecr.ap-south-1.amazonaws.com/nodeapp31'
+        ECRCRED = 'ecr:ap-south-1:aws_credentials'
+    }   
+    stages {
+      stage('GetSCM') {
+
+         steps {
+
+            // Get some code from a GitHub repository
+
+            git 'https://github.com/jmstechhome11/hello.git'
+         }
+         }
+         stage('Image Build'){
+             steps{
+                 script{
+                       docker.build('$IMAGE')
+                 }
+             }
+         }
+         stage('Push Image'){
+         steps{
+             script
+                {
+                    docker.withRegistry(ECRURL, ECRCRED)
+                    {
+                        docker.image(IMAGE).push()
+                    }
+                }
+            }
+         }
+    }
+    post
+    {
+        always
+        {
+            // make sure that the Docker image is removed
+
+            sh "docker rmi $IMAGE | true"
+        }
+    }
+}
+
+multi configuration jobs
+------------------------
+sudo docker run --restart=always -u root -d -p 8082:8080 -p 50000:50000 -v /var/jenkins_home:/var/jenkins_home -v /var/run/docker.sock:/var/run/docker.sock --name jenkins myjenkins
+
+
+-u admin:admin
+

@@ -1,0 +1,89 @@
+pipeline {
+  environment {
+    registry = "13.233.93.27:8085/javaapp"
+    registryCredential = "nexus_docker_credentails"
+    dockerImage = ''
+  }
+  agent any
+  stages {
+    stage('get scm') {
+      steps {
+        git 'https://github.com/ybmadhu/autobuild.git'
+      }
+    }
+    stage('Building image') {
+      steps{
+        script {
+          dockerImage = docker.build registry + ":$BUILD_NUMBER"
+        }
+      }
+    }
+    stage('login') {
+      steps{
+        sh "docker login -u admin -p admin123  13.233.93.27:8085"
+      }
+    }
+    stage('push') {
+      steps{
+        sh "docker push $registry:$BUILD_NUMBER"
+      }
+    }
+    stage('Remove old docker image') {
+      steps{
+        sh "docker rmi $registry:$BUILD_NUMBER"
+      }
+    }
+  }
+}
+
+
+============================with credential security================
+pipeline {
+  environment {
+    registry = "13.233.93.27:8085/javaapp"
+    dockerImage = ''
+  }
+  agent any
+  stages {
+    stage('get scm') {
+      steps {
+        git 'https://github.com/ybmadhu/autobuild.git'
+      }
+    }
+    stage('Building image') {
+      steps{
+        script {
+          dockerImage = docker.build registry + ":$BUILD_NUMBER"
+        }
+      }
+    }
+    stage('login') {
+      steps{
+          
+          script {
+          docker.withRegistry( 'http://13.233.93.27:8085', 'nexus_docker_credentails' ) {
+            dockerImage.push()
+          }
+        }
+      }
+    }
+    stage('push') {
+      steps{
+        sh "docker push $registry:$BUILD_NUMBER"
+      }
+    }
+    stage('Remove old docker image') {
+      steps{
+        sh "docker rmi $registry:$BUILD_NUMBER"
+      }
+    }
+  }
+}
+====================================================
+{
+        "insecure-registries": ["13.233.93.27:8085"],
+        "disable-legacy-registry": true
+}
+
+
+

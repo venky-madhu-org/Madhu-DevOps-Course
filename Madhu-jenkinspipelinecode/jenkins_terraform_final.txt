@@ -1,0 +1,63 @@
+
+pipeline {
+   agent any
+    tools {
+      terraform "terraform"
+      }
+   
+   environment 
+    {
+        VERSION = "${BUILD_NUMBER}"
+        PROJECT = 'nodeapp'
+        IMAGE = "$PROJECT:$VERSION"
+        ECRURL = 'https://215895321072.dkr.ecr.ap-south-1.amazonaws.com/$PROJECT'
+		ECRCRED = 'ecr:ap-south-1:aws_credentails'
+    }   
+    stages {
+      stage('GetSCM') {
+
+         steps {
+
+               git credentialsId: 'github_credentials', url: 'https://github.com/jmstechhome8/web_login_automation.git'
+         }
+         }
+         stage('Image Build'){
+             steps{
+                 script{
+                       docker.build('$IMAGE')
+                 }
+             }
+         }
+         stage('Push Image'){
+         steps{
+             script
+                {
+                    docker.withRegistry(ECRURL, ECRCRED)
+                    {
+                        docker.image(IMAGE).push()
+                    }
+                }
+            }
+         }
+        stage('terraform init'){
+         steps{
+             sh "cd devops/ && terraform init"
+            }
+         }
+         stage('apply') {
+             steps{
+                    sh 'cd devops/ && terraform apply -var="tag=$VERSION" --auto-approve'
+             }
+             }
+    
+    }
+    post
+    {
+        always
+        {
+            // make sure that the Docker image is removed
+
+            sh "docker rmi $IMAGE | true"
+        }
+    }
+}
